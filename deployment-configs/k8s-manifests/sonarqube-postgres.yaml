@@ -1,0 +1,89 @@
+###############################################################################
+# PostgreSQL for SonarQube — uses the OFFICIAL postgres image (always available
+# on Docker Hub), replacing the chart's bundled Bitnami DB whose image tags
+# Bitnami removed. Credentials come from the `sonarqube-db` Secret (synced from
+# AWS Secrets Manager by External Secrets). Applied by setup-all.sh BEFORE the
+# SonarQube Helm release.
+###############################################################################
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sonar-postgres
+  namespace: sonarqube
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: gp3
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sonar-postgres
+  namespace: sonarqube
+  labels:
+    app: sonar-postgres
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate          # single DB on one RWO volume
+  selector:
+    matchLabels:
+      app: sonar-postgres
+  template:
+    metadata:
+      labels:
+        app: sonar-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: sonar
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: sonarqube-db
+                  key: username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sonarqube-db
+                  key: password
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "$(POSTGRES_USER)", "-d", "sonar"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: sonar-postgres
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sonar-postgres
+  namespace: sonarqube
+spec:
+  selector:
+    app: sonar-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432

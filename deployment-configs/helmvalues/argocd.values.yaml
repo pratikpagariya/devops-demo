@@ -1,0 +1,60 @@
+###############################################################################
+# Argo CD — GitOps continuous delivery.
+# TLS is terminated at the ALB, so the server runs in insecure mode behind it.
+# Ingress is applied separately (k8s-manifests/ingress/argocd-ingress.yaml).
+###############################################################################
+global:
+  domain: argocd.dev.example.com   # <-- change to your domain
+
+configs:
+  params:
+    server.insecure: true          # ALB terminates TLS; avoid double-TLS
+  cm:
+    # Let the seeded App-of-apps manage applications from Git.
+    timeout.reconciliation: 180s
+    exec.enabled: "true"
+
+server:
+  replicas: 2
+  service:
+    type: ClusterIP
+  ingress:
+    enabled: false                 # we manage ingress via a manifest
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+repoServer:
+  replicas: 2
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+controller:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+
+applicationSet:
+  replicas: 1
+
+dex:
+  enabled: false
+
+redis:
+  enabled: true
+
+# Initial admin password is auto-generated into the `argocd-initial-admin-secret`
+# secret. Retrieve it with:
+#   kubectl -n argocd get secret argocd-initial-admin-secret \
+#     -o jsonpath='{.data.password}' | base64 -d

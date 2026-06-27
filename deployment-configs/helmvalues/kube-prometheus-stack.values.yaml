@@ -1,0 +1,85 @@
+###############################################################################
+# kube-prometheus-stack — Prometheus + Alertmanager + Grafana + exporters.
+# Grafana admin creds come from the `grafana-admin` Secret (synced from AWS
+# Secrets Manager). Loki is wired in as a Grafana datasource for logs.
+# Grafana ingress is applied separately (k8s-manifests/ingress/grafana-ingress.yaml).
+###############################################################################
+grafana:
+  enabled: true
+  admin:
+    existingSecret: grafana-admin
+    userKey: username
+    passwordKey: password
+  persistence:
+    enabled: true
+    storageClassName: gp3
+    size: 10Gi
+  ingress:
+    enabled: false
+  service:
+    type: ClusterIP
+  # Logs datasource (Loki single-binary service in the monitoring namespace)
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      access: proxy
+      url: http://loki.monitoring.svc.cluster.local:3100
+      jsonData:
+        maxLines: 1000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+prometheus:
+  prometheusSpec:
+    retention: 15d
+    replicas: 1
+    # Discover ServiceMonitors/PodMonitors in ALL namespaces, not just labelled.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    resources:
+      requests:
+        cpu: 250m
+        memory: 1Gi
+      limits:
+        memory: 2Gi
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: gp3
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 30Gi
+
+alertmanager:
+  alertmanagerSpec:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 256Mi
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: gp3
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 5Gi
+
+# Reduce noise on managed EKS control plane (AWS manages these).
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeEtcd:
+  enabled: false
+kubeProxy:
+  enabled: false

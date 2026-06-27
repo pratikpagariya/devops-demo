@@ -1,0 +1,85 @@
+// =============================================================================
+// Sample microservice CI pipeline (declarative).
+// Flow: checkout -> test -> SonarQube + quality gate -> build & push image to
+// ECR (Kaniko, creds via EKS Pod Identity) -> bump GitOps image tag (ArgoCD
+// then deploys). Runs on a dynamic Kubernetes "kaniko" agent.
+// =============================================================================
+pipeline {
+  agent {
+    kubernetes {
+      inheritFrom 'kaniko'
+      defaultContainer 'kaniko'
+    }
+  }
+
+  environment {
+    AWS_REGION   = 'us-east-1'
+    ECR_REGISTRY = "${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com"
+    IMAGE_REPO   = 'devops-demo-dev-api'
+    IMAGE_TAG    = "${env.GIT_COMMIT?.take(7) ?: env.BUILD_NUMBER}"
+  }
+
+  options {
+    timeout(time: 30, unit: 'MINUTES')
+    disableConcurrentBuilds()
+  }
+
+  stages {
+    stage('Checkout') {
+      steps { checkout scm }
+    }
+
+    stage('Unit Tests') {
+      steps {
+        sh 'echo "Run your unit tests here (e.g. mvn test / go test / npm test)"'
+      }
+    }
+
+    stage('SonarQube Analysis') {
+      steps {
+        withSonarQubeEnv('sonarqube') {
+          sh '''
+            echo "Run sonar-scanner here, e.g.:"
+            echo "sonar-scanner -Dsonar.projectKey=${IMAGE_REPO} -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.login=$SONAR_AUTH_TOKEN"
+          '''
+        }
+      }
+    }
+
+    stage('Quality Gate') {
+      steps {
+        timeout(time: 10, unit: 'MINUTES') {
+          waitForQualityGate abortPipeline: true
+        }
+      }
+    }
+
+    stage('Build & Push Image (Kaniko → ECR)') {
+      steps {
+        // Pod Identity on the 'jenkins' SA gives Kaniko ECR push creds.
+        sh '''
+          /kaniko/executor \
+            --context `pwd` \
+            --dockerfile Dockerfile \
+            --destination ${ECR_REGISTRY}/${IMAGE_REPO}:${IMAGE_TAG} \
+            --destination ${ECR_REGISTRY}/${IMAGE_REPO}:latest
+        '''
+      }
+    }
+
+    stage('Promote (GitOps)') {
+      steps {
+        sh '''
+          echo "Bump the image tag in the GitOps manifests and push, e.g.:"
+          echo "yq -i '.spec.template.spec.containers[0].image=\"${ECR_REGISTRY}/${IMAGE_REPO}:${IMAGE_TAG}\"' deployment-configs/k8s-manifests/.../deployment.yaml"
+          echo "git commit -am 'ci: ${IMAGE_REPO} ${IMAGE_TAG}' && git push   # ArgoCD syncs automatically"
+        '''
+      }
+    }
+  }
+
+  post {
+    success { echo "Built and pushed ${ECR_REGISTRY}/${IMAGE_REPO}:${IMAGE_TAG}" }
+    failure { echo 'Pipeline failed — check the stage logs.' }
+  }
+}

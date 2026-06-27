@@ -1,0 +1,35 @@
+###############################################################################
+# Cluster Autoscaler — scales EKS managed node group ASGs.
+# IAM via EKS Pod Identity (role created in iac/stacks/dev/platform.tf).
+#
+# Node group ASGs must be tagged (the EKS module already adds):
+#   k8s.io/cluster-autoscaler/enabled            = true
+#   k8s.io/cluster-autoscaler/<cluster-name>     = owned
+###############################################################################
+autoDiscovery:
+  clusterName: devops-demo-dev-eks   # overridden by setup-all.sh
+
+awsRegion: us-east-1
+
+rbac:
+  serviceAccount:
+    create: true
+    name: cluster-autoscaler
+    # Pod Identity — no IRSA annotation.
+
+extraArgs:
+  balance-similar-node-groups: true
+  skip-nodes-with-system-pods: false
+  skip-nodes-with-local-storage: false
+  scale-down-unneeded-time: 5m
+  scale-down-delay-after-add: 5m
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 300Mi
+  limits:
+    memory: 500Mi
+
+podDisruptionBudget:
+  maxUnavailable: 1

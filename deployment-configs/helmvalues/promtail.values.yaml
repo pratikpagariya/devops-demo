@@ -1,0 +1,20 @@
+###############################################################################
+# Promtail — ships node/pod logs to Loki. Runs as a DaemonSet.
+###############################################################################
+config:
+  clients:
+    - url: http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    memory: 256Mi
+
+# Run on every node, including tainted ones (e.g. prod spot/system pools).
+tolerations:
+  - operator: Exists
+
+serviceMonitor:
+  enabled: true   # let Prometheus scrape promtail

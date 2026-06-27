@@ -1,0 +1,49 @@
+# ============================================================================
+# Terraform
+# ============================================================================
+
+# Local .terraform working directories
+**/.terraform/*
+
+# State files — may contain secrets (e.g. RDS password) in plaintext. NEVER commit.
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+
+# Saved plan output (apply.sh writes .terraform-plan-<env>.tfplan)
+*.tfplan
+*.tfplan.*
+.terraform-plan-*.tfplan
+
+# Crash logs
+crash.log
+crash.*.log
+
+# Local override files (developer-specific, not for VCS)
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Terraform CLI config / credentials
+.terraformrc
+terraform.rc
+
+# ----------------------------------------------------------------------------
+# Intentionally committed (do NOT add these):
+#   .terraform.lock.hcl   -> pins provider versions for reproducible builds
+#   params/*.tfvars       -> environment config only; secrets come from TF_VAR_*
+# ----------------------------------------------------------------------------
+
+# ============================================================================
+# OS / Editor
+# ============================================================================
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Local artifacts (not for GitHub)
+wholecode.txt
+*.tar.gz

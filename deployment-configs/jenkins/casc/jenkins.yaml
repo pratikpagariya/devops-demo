@@ -1,0 +1,49 @@
+###############################################################################
+# Jenkins Configuration as Code (reference copy).
+# The Helm chart applies the JCasC embedded in helmvalues/jenkins.values.yaml.
+# This standalone file documents the full intended configuration and can be
+# mounted via controller.JCasC.configScripts if you prefer to manage it here.
+###############################################################################
+jenkins:
+  systemMessage: "devops-demo Jenkins — managed by Configuration as Code"
+  numExecutors: 0          # build only on dynamic Kubernetes agents
+  clouds:
+    - kubernetes:
+        name: "kubernetes"
+        serverUrl: "https://kubernetes.default"
+        namespace: "jenkins"
+        jenkinsUrl: "http://jenkins.jenkins.svc.cluster.local:8080"
+        jenkinsTunnel: "jenkins-agent.jenkins.svc.cluster.local:50000"
+        containerCapStr: "10"
+        podLabels:
+          - key: "jenkins"
+            value: "agent"
+        templates:
+          - name: "kaniko"
+            label: "kaniko"
+            serviceAccount: "jenkins"   # Pod Identity → ECR push
+            yaml: |
+              spec:
+                containers:
+                  - name: kaniko
+                    image: gcr.io/kaniko-project/executor:debug
+                    command: ["/busybox/cat"]
+                    tty: true
+
+security:
+  globalJobDslSecurityConfiguration:
+    useScriptSecurity: false   # demo convenience; enable + approve scripts in prod
+
+unclassified:
+  location:
+    url: "https://jenkins.dev.example.com/"
+  sonarGlobalConfiguration:
+    buildWrapperEnabled: true
+    installations:
+      - name: "sonarqube"
+        serverUrl: "http://sonarqube-sonarqube.sonarqube.svc.cluster.local:9000"
+        credentialsId: "sonarqube-token"
+
+# Credentials (git-credentials, registry-credentials, sonarqube-token) are
+# imported automatically from labelled Kubernetes Secrets by the
+# kubernetes-credentials-provider plugin — see the ExternalSecrets manifests.

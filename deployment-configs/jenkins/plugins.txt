@@ -1,0 +1,11 @@
+# Plugins baked into the custom Jenkins image at build time (see Dockerfile).
+# jenkins-plugin-cli resolves the latest version compatible with the base
+# image's Jenkins core (2.504.1). Add more lines here and rebuild to extend.
+kubernetes
+workflow-aggregator
+git
+configuration-as-code
+job-dsl
+sonar
+docker-workflow
+pipeline-utility-steps

@@ -1,0 +1,84 @@
+###############################################################################
+# Chart catalogue — single source of truth for setup-all.sh.
+#
+# Order matters: installed top→bottom. Controllers first, then External
+# Secrets (so credentials exist), then CI/CD + observability apps.
+#
+# NOTE: chart versions are pinned for reproducibility. Verify/refresh with:
+#   helm repo update && helm search repo <repo>/<chart> --versions | head
+# The `appVersion` comment shows the app shipped by that chart version.
+###############################################################################
+charts:
+  # ---- Cluster controllers ----
+  - name: metrics-server
+    repo: metrics-server
+    chart: metrics-server
+    version: "3.12.2"
+    namespace: kube-system
+    values: metrics-server.values.yaml
+
+  - name: aws-load-balancer-controller
+    repo: eks
+    chart: aws-load-balancer-controller
+    version: "1.9.2"            # appVersion v2.9.x
+    namespace: kube-system
+    values: aws-load-balancer-controller.values.yaml
+
+  - name: cluster-autoscaler
+    repo: autoscaler
+    chart: cluster-autoscaler
+    version: "9.43.2"
+    namespace: kube-system
+    values: cluster-autoscaler.values.yaml
+
+  # ---- Secrets plumbing (install before apps that need credentials) ----
+  - name: external-secrets
+    repo: external-secrets
+    chart: external-secrets
+    version: "0.10.7"
+    namespace: external-secrets
+    values: external-secrets.values.yaml
+
+  # ---- CI/CD ----
+  - name: argocd
+    repo: argo
+    chart: argo-cd
+    version: "7.7.7"            # appVersion v2.13.x
+    namespace: argocd
+    values: argocd.values.yaml
+
+  - name: jenkins
+    repo: jenkins
+    chart: jenkins
+    version: "5.8.16"          # appVersion 2.x LTS
+    namespace: jenkins
+    values: jenkins.values.yaml
+
+  - name: sonarqube
+    repo: sonarqube
+    chart: sonarqube
+    version: "10.7.0"          # appVersion 10.7.x community
+    namespace: sonarqube
+    values: sonarqube.values.yaml
+
+  # ---- Observability ----
+  - name: kube-prometheus-stack
+    repo: prometheus-community
+    chart: kube-prometheus-stack
+    version: "65.5.1"          # Prometheus + Grafana + Alertmanager
+    namespace: monitoring
+    values: kube-prometheus-stack.values.yaml
+
+  - name: loki
+    repo: grafana
+    chart: loki
+    version: "6.18.0"
+    namespace: monitoring
+    values: loki.values.yaml
+
+  - name: promtail
+    repo: grafana
+    chart: promtail
+    version: "6.16.6"
+    namespace: monitoring
+    values: promtail.values.yaml

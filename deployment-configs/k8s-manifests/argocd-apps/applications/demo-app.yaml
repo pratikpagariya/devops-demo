@@ -1,0 +1,27 @@
+###############################################################################
+# Sample child Application managed by the App-of-Apps.
+# Deploys the Pod Identity demo workload (namespace: app) from Git.
+# Replace path/repoURL with your real microservice manifests or Helm chart.
+###############################################################################
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: demo-app
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/your-org/devops-demo.git
+    targetRevision: main
+    path: iac/examples/k8s-pod-identity
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: app
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -1,0 +1,79 @@
+###############################################################################
+# Jenkins controller — CI engine.
+# - Admin creds come from the `jenkins-admin` Kubernetes Secret (synced from
+#   AWS Secrets Manager by External Secrets).
+# - ECR push permission comes from EKS Pod Identity bound to the `jenkins` SA
+#   (see eks_pod_identity_associations.jenkins-ecr in params/dev.tfvars).
+# - Ingress is applied separately (k8s-manifests/ingress/jenkins-ingress.yaml).
+###############################################################################
+controller:
+  # Pre-baked image from ECR — plugins are baked in at build time, so the pod
+  # downloads NOTHING at startup (eliminates the boot-time 503 plugin failures).
+  # ACCOUNT_ID is filled in by the setup step (sed) with your AWS account id.
+  # Nodes can pull from ECR via their IAM role (AmazonEC2ContainerRegistryReadOnly).
+  image:
+    registry: "ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com"
+    repository: "devops-demo-dev-jenkins"
+    tag: "2.504.1"
+  componentName: jenkins-controller
+  replicas: 1
+
+  admin:
+    existingSecret: jenkins-admin
+    userKey: username
+    passwordKey: password
+
+  # Persisted JENKINS_HOME
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      memory: 2Gi
+
+  serviceType: ClusterIP
+  ingress:
+    enabled: false
+
+  # Plugins are baked into the custom ECR image at build time (see
+  # deployment-configs/jenkins/Dockerfile + plugins.txt), so we install NONE at
+  # boot. This is what removes the 503-on-startup failures for good.
+  installPlugins: false
+
+  # kubernetes-credentials-provider was removed for now: it lists Secrets in the
+  # jenkins namespace at startup and needs extra RBAC (secrets get/list/watch).
+  # The git/registry/sonar secrets are still REPLACE_ME placeholders, so nothing
+  # functional is lost. Re-add it with that RBAC once you set real credentials.
+  additionalPlugins: []
+
+  JCasC:
+    defaultConfig: true
+    # Custom JCasC removed to guarantee a clean boot (no merge conflicts).
+    # After Jenkins is healthy, configure from the UI:
+    #   - SonarQube: Manage Jenkins -> System -> SonarQube servers
+    #   - Seed job: a pipeline job pointing at jenkins/Jenkinsfile.seed
+
+  sidecars:
+    configAutoReload:
+      enabled: true
+
+serviceAccount:
+  create: true
+  name: jenkins      # Pod Identity (ECR push) binds to this SA
+
+agent:
+  enabled: true
+  podName: jenkins-agent
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+  # Run agents under the jenkins SA so Pod Identity ECR creds are available.
+  serviceAccountName: jenkins
+
+persistence:
+  enabled: true
+  storageClass: gp3
+  size: 20Gi

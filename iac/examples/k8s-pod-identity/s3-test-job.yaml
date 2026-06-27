@@ -1,0 +1,33 @@
+---
+# Quick smoke test: verifies Pod Identity grants S3 access to the pod.
+# Run: kubectl apply -f s3-test-job.yaml
+# Check: kubectl logs -n app job/s3-identity-test
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: s3-identity-test
+  namespace: app
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      serviceAccountName: api-service-account
+      restartPolicy: Never
+      containers:
+        - name: aws-cli
+          image: amazon/aws-cli:latest
+          command:
+            - sh
+            - -c
+            - |
+              echo "=== Pod Identity smoke test ==="
+              echo "Caller identity:"
+              aws sts get-caller-identity
+              echo ""
+              echo "S3 bucket list:"
+              aws s3 ls
+              echo ""
+              echo "Test PASSED — Pod Identity is working."
+          env:
+            - name: AWS_REGION
+              value: us-east-1

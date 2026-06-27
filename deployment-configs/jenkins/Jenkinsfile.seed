@@ -1,0 +1,25 @@
+// =============================================================================
+// Seed pipeline — runs the Job DSL scripts to (re)generate all pipeline jobs.
+// Triggered by the JCasC-defined "seed-job". Safe to re-run; idempotent.
+// =============================================================================
+pipeline {
+  agent { kubernetes { inheritFrom 'kaniko' } }
+
+  options { timeout(time: 10, unit: 'MINUTES') }
+
+  stages {
+    stage('Checkout') {
+      steps { checkout scm }
+    }
+    stage('Generate Jobs from Job DSL') {
+      steps {
+        jobDsl(
+          targets: 'deployment-configs/jobdsl/*.groovy',
+          removedJobAction: 'DELETE',
+          removedViewAction: 'DELETE',
+          lookupStrategy: 'SEED_JOB'
+        )
+      }
+    }
+  }
+}

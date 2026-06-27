@@ -1,0 +1,29 @@
+###############################################################################
+# App-of-Apps — the single Argo CD Application you apply by hand. It then
+# manages every child Application under .../argocd-apps/applications/ from Git.
+# Update repoURL/targetRevision to your fork before applying.
+###############################################################################
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: app-of-apps
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/your-org/devops-demo.git
+    targetRevision: main
+    path: deployment-configs/k8s-manifests/argocd-apps/applications
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

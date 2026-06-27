@@ -1,0 +1,57 @@
+###############################################################################
+# SonarQube (Community) — static analysis / quality gate for the CI pipeline.
+# DB password + monitoring passcode come from Kubernetes Secrets synced from
+# AWS Secrets Manager by External Secrets.
+# Ingress is applied separately (k8s-manifests/ingress/sonarqube-ingress.yaml).
+###############################################################################
+community:
+  enabled: true
+
+edition: community
+
+# Web monitoring passcode (required by recent charts) from a Secret.
+monitoringPasscodeSecretName: sonarqube-monitoring
+monitoringPasscodeSecretKey: password
+
+ingress:
+  enabled: false
+
+service:
+  type: ClusterIP
+
+# The chart's bundled Bitnami PostgreSQL is DISABLED — Bitnami removed its old
+# image tags from Docker Hub, which broke the image pull. We run our own DB from
+# the official `postgres` image (k8s-manifests/sonarqube-postgres.yaml) and point
+# SonarQube at it here. The password comes from the `sonarqube-db` Secret.
+postgresql:
+  enabled: false
+
+jdbcOverwrite:
+  enable: true
+  jdbcUrl: "jdbc:postgresql://sonar-postgres.sonarqube.svc.cluster.local:5432/sonar"
+  jdbcUsername: "sonarUser"
+  jdbcSecretName: "sonarqube-db"
+  jdbcSecretPasswordKey: "password"
+
+persistence:
+  enabled: true
+  storageClass: gp3
+  size: 10Gi
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 2Gi
+  limits:
+    memory: 4Gi
+
+# SonarQube needs these kernel settings on the node; the init container sets
+# them. On AL2023 nodes this works out of the box.
+initSysctl:
+  enabled: true
+
+account:
+  # Admin password is 'admin' on first boot — change it immediately after login,
+  # or wire account.adminPasswordSecretName to a Secret for automation.
+  adminPassword: ""
+  currentAdminPassword: "admin"

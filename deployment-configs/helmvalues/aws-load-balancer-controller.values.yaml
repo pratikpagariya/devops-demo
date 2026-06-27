@@ -1,0 +1,33 @@
+###############################################################################
+# AWS Load Balancer Controller — provisions ALBs/NLBs for Ingress & Service.
+# IAM via EKS Pod Identity (role created in iac/stacks/dev/platform.tf).
+#
+# clusterName / region / vpcId are overridden by setup-all.sh (--set) with the
+# live Terraform outputs; the defaults below are for reference only.
+###############################################################################
+clusterName: devops-demo-dev-eks
+region: us-east-1
+vpcId: ""   # injected by setup-all.sh from `terraform output vpc_id`
+
+replicaCount: 2
+
+serviceAccount:
+  create: true
+  name: aws-load-balancer-controller
+  # Pod Identity supplies credentials — do NOT add an eks.amazonaws.com/role-arn
+  # annotation (that is IRSA, which this project does not use).
+
+# Recommended for Pod Identity / IMDSv2 nodes
+defaultTargetType: ip
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    memory: 256Mi
+
+podDisruptionBudget:
+  maxUnavailable: 1
+
+enableServiceMutatorWebhook: false
