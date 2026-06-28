@@ -61,7 +61,7 @@ eks_cluster_log_types = ["api", "audit", "authenticator"]
 
 eks_node_groups = {
   general = {
-    instance_types = ["c7i-flex.large"]
+    instance_types = ["m7i-flex.large"]
     capacity_type  = "ON_DEMAND"
     ami_type       = "AL2023_x86_64_STANDARD"
     disk_size      = 20
