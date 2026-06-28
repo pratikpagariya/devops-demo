@@ -1,0 +1,71 @@
+###############################################################################
+# Todo frontend — static React build served by unprivileged Nginx (port 8080).
+# The ALB routes "/" here and "/api" to the backend, so Nginx only serves the
+# SPA (no API proxy needed in production).
+###############################################################################
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-frontend
+  namespace: todo
+  labels:
+    app.kubernetes.io/name: todo-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: todo-frontend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: todo-frontend
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: frontend
+          image: todo-frontend           # rewritten by kustomize → ECR image:tag
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsUser: 101               # nginx-unprivileged default uid
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: todo-frontend
+  namespace: todo
+  labels:
+    app.kubernetes.io/name: todo-frontend
+spec:
+  selector:
+    app.kubernetes.io/name: todo-frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

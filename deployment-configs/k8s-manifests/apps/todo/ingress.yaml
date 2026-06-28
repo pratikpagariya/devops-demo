@@ -1,0 +1,39 @@
+###############################################################################
+# Todo app ingress (ALB). Path routing on one shared ALB:
+#   /api  → todo-backend:3000
+#   /     → todo-frontend:80
+# Shares the platform ALB via group.name=devops-demo-dev.
+# Set a real host + ACM certificate-arn before production use.
+###############################################################################
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: todo
+  namespace: todo
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/group.name: devops-demo-dev
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    # alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:ACCOUNT:certificate/REPLACE_ME
+spec:
+  ingressClassName: alb
+  rules:
+    - host: todo.dev.example.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: todo-backend
+                port:
+                  number: 3000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: todo-frontend
+                port:
+                  number: 80

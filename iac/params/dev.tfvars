@@ -36,6 +36,17 @@ ecr_repositories = {
     scan_on_push         = true
     force_delete         = true
   }
+  # Todo-List-App images — CI (Jenkins/Buildah) pushes here; ArgoCD deploys them.
+  todo-backend = {
+    image_tag_mutability = "MUTABLE"
+    scan_on_push         = true
+    force_delete         = true
+  }
+  todo-frontend = {
+    image_tag_mutability = "MUTABLE"
+    scan_on_push         = true
+    force_delete         = true
+  }
 }
 
 ###############################################################################

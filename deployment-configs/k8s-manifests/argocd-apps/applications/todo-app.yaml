@@ -1,0 +1,27 @@
+###############################################################################
+# ArgoCD Application for the Todo app. Dropped under argocd-apps/applications/
+# so the existing App-of-Apps picks it up automatically. ArgoCD watches the
+# infra repo path below (kustomize) and deploys to the `todo` namespace.
+###############################################################################
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: todo-app
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/pratikpagariya/devops-demo.git
+    targetRevision: main
+    path: deployment-configs/k8s-manifests/apps/todo
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: todo
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

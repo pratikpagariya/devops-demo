@@ -1,0 +1,27 @@
+###############################################################################
+# Kustomize entrypoint for the Todo app (ArgoCD renders this with kustomize).
+#
+# The CI pipeline updates the image tags here with:
+#   kustomize edit set image \
+#     todo-backend=<ECR>/devops-demo-dev-todo-backend:<TAG> \
+#     todo-frontend=<ECR>/devops-demo-dev-todo-frontend:<TAG>
+# then commits — ArgoCD syncs the new tags to EKS.
+###############################################################################
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: todo
+
+resources:
+  - namespace.yaml
+  - backend.yaml
+  - frontend.yaml
+  - ingress.yaml
+
+images:
+  - name: todo-backend
+    newName: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/devops-demo-dev-todo-backend
+    newTag: latest
+  - name: todo-frontend
+    newName: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/devops-demo-dev-todo-frontend
+    newTag: latest

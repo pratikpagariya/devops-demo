@@ -1,0 +1,77 @@
+###############################################################################
+# Todo backend — Node.js/Express API (port 3000).
+# Image name "todo-backend" is a placeholder that kustomize rewrites to the
+# real ECR image + tag (see kustomization.yaml; the CI pipeline updates it).
+###############################################################################
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-backend
+  namespace: todo
+  labels:
+    app.kubernetes.io/name: todo-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: todo-backend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: todo-backend
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: backend
+          image: todo-backend            # rewritten by kustomize → ECR image:tag
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: PORT
+              value: "3000"
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsUser: 1000
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: todo-backend
+  namespace: todo
+  labels:
+    app.kubernetes.io/name: todo-backend
+  annotations:
+    # Per-target-group health check for the ALB (backend has no "/" route).
+    alb.ingress.kubernetes.io/healthcheck-path: /api/health
+spec:
+  selector:
+    app.kubernetes.io/name: todo-backend
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
