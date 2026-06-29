@@ -13,15 +13,18 @@ metadata:
   annotations:
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
-    alb.ingress.kubernetes.io/group.name: devops-demo-dev
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
-    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/group.name: todo
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    # HTTPS is off for the demo (no ACM cert). To enable TLS later: set
+    # certificate-arn, add {"HTTPS":443} to listen-ports, and ssl-redirect: "443".
     # alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:ACCOUNT:certificate/REPLACE_ME
 spec:
   ingressClassName: alb
   rules:
-    - host: todo.dev.example.com
-      http:
+    # Host-less rule → the ALB answers on its own DNS name (no domain needed for
+    # the demo). Add `host:` back once you point a real domain at the ALB.
+    - http:
         paths:
           - path: /api
             pathType: Prefix
