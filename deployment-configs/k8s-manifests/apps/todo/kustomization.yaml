@@ -20,8 +20,8 @@ resources:
 
 images:
   - name: todo-backend
-    newName: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/devops-demo-dev-todo-backend
-    newTag: latest
+    newName: 355653384401.dkr.ecr.us-east-1.amazonaws.com/devops-demo-dev-todo-backend
+    newTag: f4e3308
   - name: todo-frontend
-    newName: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/devops-demo-dev-todo-frontend
-    newTag: latest
+    newName: 355653384401.dkr.ecr.us-east-1.amazonaws.com/devops-demo-dev-todo-frontend
+    newTag: f4e3308
