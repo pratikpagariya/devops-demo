@@ -23,6 +23,26 @@ controller:
     userKey: username
     passwordKey: password
 
+  # Secret VALUES from AWS Secrets Manager (synced to the `jenkins-platform-creds`
+  # K8s secret by External Secrets). JCasC reads these as ${VAR} — so no token is
+  # ever written into this file or the image.
+  containerEnv:
+    - name: GITHUB_USERNAME
+      valueFrom:
+        secretKeyRef:
+          name: jenkins-platform-creds
+          key: github-username
+    - name: GITHUB_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: jenkins-platform-creds
+          key: github-token
+    - name: SONAR_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: jenkins-platform-creds
+          key: sonar-token
+
   # Persisted JENKINS_HOME
   resources:
     requests:
@@ -40,18 +60,61 @@ controller:
   # boot. This is what removes the 503-on-startup failures for good.
   installPlugins: false
 
-  # kubernetes-credentials-provider was removed for now: it lists Secrets in the
-  # jenkins namespace at startup and needs extra RBAC (secrets get/list/watch).
-  # The git/registry/sonar secrets are still REPLACE_ME placeholders, so nothing
-  # functional is lost. Re-add it with that RBAC once you set real credentials.
   additionalPlugins: []
 
+  # Everything below is declarative (no UI clicking):
+  #   - credentials (github + sonar) read from the env vars injected above
+  #   - the SonarQube server
+  #   - Job DSL script security OFF (so the seed job runs without manual approval)
+  #   - the seed-job itself (it runs the Job DSL in the infra repo)
   JCasC:
     defaultConfig: true
-    # Custom JCasC removed to guarantee a clean boot (no merge conflicts).
-    # After Jenkins is healthy, configure from the UI:
-    #   - SonarQube: Manage Jenkins -> System -> SonarQube servers
-    #   - Seed job: a pipeline job pointing at jenkins/Jenkinsfile.seed
+    configScripts:
+      platform: |
+        credentials:
+          system:
+            domainCredentials:
+              - credentials:
+                  - usernamePassword:
+                      scope: GLOBAL
+                      id: "github-credentials"
+                      description: "GitHub (from AWS Secrets Manager)"
+                      username: "${GITHUB_USERNAME}"
+                      password: "${GITHUB_TOKEN}"
+                  - string:
+                      scope: GLOBAL
+                      id: "sonarqube-token"
+                      description: "SonarQube token (from AWS Secrets Manager)"
+                      secret: "${SONAR_TOKEN}"
+        unclassified:
+          sonarGlobalConfiguration:
+            buildWrapperEnabled: true
+            installations:
+              - name: "sonarqube"
+                serverUrl: "http://sonarqube-sonarqube.sonarqube.svc.cluster.local:9000"
+                credentialsId: "sonarqube-token"
+        security:
+          globalJobDslSecurityConfiguration:
+            useScriptSecurity: false
+        jobs:
+          - script: |
+              pipelineJob('seed-job') {
+                description('Generates the app pipeline jobs from Job DSL in the infra repo')
+                definition {
+                  cpsScm {
+                    scm {
+                      git {
+                        remote {
+                          url('https://github.com/pratikpagariya/devops-demo.git')
+                          credentials('github-credentials')
+                        }
+                        branches('main')
+                      }
+                    }
+                    scriptPath('deployment-configs/jenkins/Jenkinsfile.seed')
+                  }
+                }
+              }
 
   sidecars:
     configAutoReload:

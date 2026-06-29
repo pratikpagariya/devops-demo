@@ -68,12 +68,41 @@ module "secrets" {
 
   # Dev: force immediate deletion (no 7-day recovery window) so repeated
   # destroy/apply cycles don't hit "secret already scheduled for deletion".
-  # (In prod, keep the module default of 7+ days for safety.)
+  # The git-credentials + sonarqube-token VALUES come from the gitignored
+  # secrets.auto.tfvars (vars below); all other secrets keep their tfvars value.
   secrets = {
-    for k, v in var.platform_secrets : k => merge(v, { recovery_window_in_days = 0 })
+    for k, v in var.platform_secrets : k => merge(
+      v,
+      { recovery_window_in_days = 0 },
+      k == "git-credentials" ? { secret_string = jsonencode({ username = var.github_username, password = var.github_token }) } : {},
+      k == "sonarqube-token" ? { secret_string = jsonencode({ token = var.sonarqube_token }) } : {},
+    )
   }
 
   tags = local.common_tags
+}
+
+###############################################################################
+# Sensitive token values. Set these in a GITIGNORED secrets.auto.tfvars
+# (Terraform auto-loads *.auto.tfvars). They default to placeholders so a fresh
+# apply still works; update them with real values + re-apply.
+###############################################################################
+variable "github_username" {
+  description = "GitHub username for the github-credentials Jenkins credential"
+  type        = string
+  default     = "git-user"
+}
+variable "github_token" {
+  description = "GitHub PAT — set in secrets.auto.tfvars (gitignored); never commit"
+  type        = string
+  sensitive   = true
+  default     = "REPLACE_ME_PAT"
+}
+variable "sonarqube_token" {
+  description = "SonarQube token — set in secrets.auto.tfvars after SonarQube is up"
+  type        = string
+  sensitive   = true
+  default     = "REPLACE_ME_SONAR_TOKEN"
 }
 
 ###############################################################################

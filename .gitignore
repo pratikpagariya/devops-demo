@@ -29,10 +29,15 @@ override.tf.json
 .terraformrc
 terraform.rc
 
+# Local secret values (real tokens) — auto-loaded by Terraform, NEVER commit.
+# The committed *.example template shows the format.
+*.auto.tfvars
+
 # ----------------------------------------------------------------------------
 # Intentionally committed (do NOT add these):
-#   .terraform.lock.hcl   -> pins provider versions for reproducible builds
-#   params/*.tfvars       -> environment config only; secrets come from TF_VAR_*
+#   .terraform.lock.hcl       -> pins provider versions for reproducible builds
+#   params/*.tfvars           -> environment config only; secrets come from vars
+#   *.auto.tfvars.example     -> template for the gitignored secrets.auto.tfvars
 # ----------------------------------------------------------------------------
 
 # ============================================================================

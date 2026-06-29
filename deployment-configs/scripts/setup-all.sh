@@ -155,6 +155,7 @@ kubectl apply -f "$MANIFESTS/external-secrets/externalsecrets.yaml"
 
 # Block until the credentials the apps need actually exist.
 wait_for_secret jenkins   jenkins-admin
+wait_for_secret jenkins   jenkins-platform-creds
 wait_for_secret monitoring grafana-admin
 wait_for_secret sonarqube sonarqube-db
 wait_for_secret sonarqube sonarqube-monitoring
