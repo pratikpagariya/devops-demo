@@ -49,6 +49,9 @@ Thumbs.db
 .idea/
 .vscode/
 
+# Claude Code per-user local settings — machine-specific, not for the repo
+.claude/settings.local.json
+
 # Local artifacts (not for GitHub)
 wholecode.txt
 *.tar.gz
